@@ -1,0 +1,8 @@
+Debug/
+Release/
+NuiDatabase/
+packages/
+bin/
+obj/
+*~
+.vs/

@@ -14,12 +14,23 @@ namespace HDFaceSample {
         KinectSensor sensor = null;
         BodyFrameSource bodySource = null;
         BodyFrameReader bodyReader = null;
-        HighDefinitionFaceFrameSource faceSource = null;
-        HighDefinitionFaceFrameReader faceReader = null;
+        HighDefinitionFaceFrameSource hdFaceFrameSource = null;
+        HighDefinitionFaceFrameReader hdFaceFrameReader = null;
         FaceAlignment faceAlignment = null;
         FaceModel faceModel = null;
+        FaceModelBuilder faceModelBuilder = null;
 
         public event EventHandler<FacePointEventArgs> FacePointUpdated;
+
+        public int FrameWidth {
+            get { return sensor.ColorFrameSource.FrameDescription.Width; }
+        }
+
+        public int FrameHeight {
+            get { return sensor.ColorFrameSource.FrameDescription.Height; }
+        }
+
+        public bool IsFaceModelProduced { get; private set; }
 
         ~KinectFaceSensor() {
             if (faceModel != null) {
@@ -30,24 +41,44 @@ namespace HDFaceSample {
                 sensor.Close();
             }
         }
-
+        
         public void Initialize() {
             sensor = KinectSensor.GetDefault();
             if (sensor == null) {
                 throw new System.IO.IOException("Failed to detect KinectSensor.");
             }
-
+            
             bodySource = sensor.BodyFrameSource;
             bodyReader = bodySource.OpenReader();
             bodyReader.FrameArrived += BodyReader_FrameArrived;
 
-            faceSource = new HighDefinitionFaceFrameSource(sensor);
+            hdFaceFrameSource = new HighDefinitionFaceFrameSource(sensor);
 
-            faceReader = faceSource.OpenReader();
-            faceReader.FrameArrived += FaceReader_FrameArrived;
+            hdFaceFrameReader = hdFaceFrameSource.OpenReader();
+            hdFaceFrameReader.FrameArrived += FaceReader_FrameArrived;
 
             faceModel = new FaceModel();
             faceAlignment = new FaceAlignment();
+
+            FaceModelBuilderAttributes attributes = FaceModelBuilderAttributes.None;
+            faceModelBuilder = hdFaceFrameSource.OpenModelBuilder(attributes);
+            if (faceModelBuilder == null) {
+                throw new System.IO.IOException("Failed to open model builder.");
+            }
+            faceModelBuilder.BeginFaceDataCollection();
+            faceModelBuilder.CollectionStatusChanged += FaceModelBuilder_CollectionStatusChanged;
+            faceModelBuilder.CaptureStatusChanged += FaceModelBuilder_CaptureStatusChanged;
+            faceModelBuilder.CollectionCompleted += FaceModelBuilder_CollectionCompleted;
+        }
+
+        private void FaceModelBuilder_CollectionStatusChanged(object sender, FaceModelBuilderCollectionStatusChangedEventArgs e) {
+            if (faceModelBuilder == null) {
+                return;
+            }
+            System.Diagnostics.Debug.WriteLine("CollectionStatus: " + faceModelBuilder.CollectionStatus.ToString());
+        }
+
+        private void FaceModelBuilder_CaptureStatusChanged(object sender, FaceModelBuilderCaptureStatusChangedEventArgs e) {
         }
 
         public void Open() {
@@ -56,17 +87,6 @@ namespace HDFaceSample {
 
         public void Close() {
             sensor.Close();
-        }
-
-        private void FaceReader_FrameArrived(object sender, HighDefinitionFaceFrameArrivedEventArgs e) {
-            using (var frame = e.FrameReference.AcquireFrame()) {
-                if (frame == null || !frame.IsFaceTracked) {
-                    System.Diagnostics.Debug.WriteLine("frame is not face tracked.");
-                    return;
-                }
-                frame.GetAndRefreshFaceAlignmentResult(faceAlignment);
-                updateFacePoints();
-            }
         }
 
         void BodyReader_FrameArrived(object sender, BodyFrameArrivedEventArgs e) {
@@ -79,10 +99,21 @@ namespace HDFaceSample {
                 frame.GetAndRefreshBodyData(bodies);
 
                 Body body = bodies.Where(b => b.IsTracked).FirstOrDefault();
-                if (!faceSource.IsTrackingIdValid && body != null) {
+                if (!hdFaceFrameSource.IsTrackingIdValid && body != null) {
                     System.Diagnostics.Debug.Write(body.TrackingId);
-                    faceSource.TrackingId = body.TrackingId;
+                    hdFaceFrameSource.TrackingId = body.TrackingId;
                 }
+            }
+        }
+
+        private void FaceReader_FrameArrived(object sender, HighDefinitionFaceFrameArrivedEventArgs e) {
+            using (var frame = e.FrameReference.AcquireFrame()) {
+                if (frame == null || !frame.IsFaceTracked) {
+                    System.Diagnostics.Debug.WriteLine("frame is not face tracked.");
+                    return;
+                }
+                frame.GetAndRefreshFaceAlignmentResult(faceAlignment);
+                updateFacePoints();
             }
         }
 
@@ -111,7 +142,17 @@ namespace HDFaceSample {
                 cameraPoints.Add(new Point3(cameraVertices[i].X, cameraVertices[i].Y, cameraVertices[i].Z));
                 depthPoints.Add(new Point2(depthVertices[i].X, depthVertices[i].Y));
             }
+
             FacePointUpdated(this, new FacePointEventArgs(cameraPoints, depthPoints));  
         }
-    }    
+
+        private void FaceModelBuilder_CollectionCompleted(object sender, FaceModelBuilderCollectionCompletedEventArgs e) {
+            System.Diagnostics.Debug.WriteLine("FaceModelBuild Complete!");
+            faceModel = e.ModelData.ProduceFaceModel();
+            IsFaceModelProduced = true;
+            faceModelBuilder.Dispose();
+            faceModelBuilder = null;
+        }
+
+    }
 }

@@ -23,11 +23,11 @@ namespace HDFaceSample {
         public event EventHandler<FacePointEventArgs> FacePointUpdated;
 
         public int FrameWidth {
-            get { return sensor.ColorFrameSource.FrameDescription.Width; }
+            get { return sensor.DepthFrameSource.FrameDescription.Width; }
         }
 
         public int FrameHeight {
-            get { return sensor.ColorFrameSource.FrameDescription.Height; }
+            get { return sensor.DepthFrameSource.FrameDescription.Height; }
         }
 
         public bool IsFaceModelProduced { get; private set; }
@@ -106,10 +106,9 @@ namespace HDFaceSample {
             }
         }
 
-        private void FaceReader_FrameArrived(object sender, HighDefinitionFaceFrameArrivedEventArgs e) {
+        void FaceReader_FrameArrived(object sender, HighDefinitionFaceFrameArrivedEventArgs e) {
             using (var frame = e.FrameReference.AcquireFrame()) {
                 if (frame == null || !frame.IsFaceTracked) {
-                    System.Diagnostics.Debug.WriteLine("frame is not face tracked.");
                     return;
                 }
                 frame.GetAndRefreshFaceAlignmentResult(faceAlignment);
@@ -146,7 +145,8 @@ namespace HDFaceSample {
             FacePointUpdated(this, new FacePointEventArgs(cameraPoints, depthPoints));  
         }
 
-        private void FaceModelBuilder_CollectionCompleted(object sender, FaceModelBuilderCollectionCompletedEventArgs e) {
+        void FaceModelBuilder_CollectionCompleted(object sender, FaceModelBuilderCollectionCompletedEventArgs e) {
+
             System.Diagnostics.Debug.WriteLine("FaceModelBuild Complete!");
             faceModel = e.ModelData.ProduceFaceModel();
             IsFaceModelProduced = true;

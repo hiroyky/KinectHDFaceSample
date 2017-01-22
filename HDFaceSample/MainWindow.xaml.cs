@@ -32,7 +32,7 @@ namespace HDFaceSample {
                     Ellipse ellipse = new Ellipse();
                     ellipse.Width = 2.0;
                     ellipse.Height = 2.0;
-                    ellipse.Fill = new SolidColorBrush(Colors.Blue);
+                    ellipse.Fill = new SolidColorBrush(Colors.Aqua);
                     vertices.Add(ellipse);
                 }
                 foreach (Ellipse ellipse in vertices) {
@@ -54,6 +54,8 @@ namespace HDFaceSample {
 
         private void Window_Loaded(object sender, RoutedEventArgs e) {
             sensor.Initialize();
+            canvas.Width = sensor.FrameWidth;
+            canvas.Height = sensor.FrameHeight;
             sensor.Open();          
         }
     }

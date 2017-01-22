@@ -5,10 +5,10 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:HDFaceSample"
         mc:Ignorable="d"
-        Title="Kinect HD Face sample" Height="500" Width="525" Loaded="Window_Loaded">
+        Title="Kinect HD Face sample" Height="600" Width="800" Loaded="Window_Loaded">
     <Grid>
         <Viewbox>
-            <Canvas Name="canvas" Width="512" Height="424"></Canvas>
+            <Canvas Name="canvas" Width="512" Height="424" Background="Black"></Canvas>
         </Viewbox>
     </Grid>
 </Window>

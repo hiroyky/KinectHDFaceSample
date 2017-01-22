@@ -10,5 +10,7 @@ namespace HDFaceSample {
         void Open();
         void Close();
         event EventHandler<FacePointEventArgs> FacePointUpdated;
+        int FrameWidth { get; }
+        int FrameHeight { get; }
     }
 }
